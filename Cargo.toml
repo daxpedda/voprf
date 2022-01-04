@@ -44,6 +44,7 @@ num-traits = { version = "0.2", default-features = false, optional = true }
 once_cell = { version = "1", default-features = false, optional = true }
 p256_ = { package = "p256", version = "0.10", default-features = false, features = [
   "arithmetic",
+  "hashing",
 ], optional = true }
 rand_core = { version = "0.6", default-features = false }
 serde = { version = "1", default-features = false, features = [
@@ -64,3 +65,7 @@ sha2 = "0.10"
 [package.metadata.docs.rs]
 features = ["danger", "p256", "std"]
 targets = []
+
+[patch.crates-io]
+hash2field = { git = "https://github.com/khonsulabs/hash2field", branch = "update-deps" }
+p256 = { git = "https://github.com/mikelodder7/elliptic-curves" }

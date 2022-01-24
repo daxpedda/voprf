@@ -22,10 +22,14 @@ fn test_group_properties() -> Result<()> {
 
         test_identity_element_error::<Ristretto255>()?;
         test_zero_scalar_error::<Ristretto255>()?;
+        #[cfg(feature = "serde")]
+        test_serde::<Ristretto255>()?;
     }
 
     test_identity_element_error::<NistP256>()?;
     test_zero_scalar_error::<NistP256>()?;
+    #[cfg(feature = "serde")]
+    test_serde::<NistP256>()?;
 
     Ok(())
 }
@@ -44,6 +48,36 @@ fn test_zero_scalar_error<G: Group>() -> Result<()> {
     let zero_scalar = G::zero_scalar();
     let result = G::deserialize_scalar(&G::serialize_scalar(zero_scalar));
     assert!(matches!(result, Err(Error::Deserialization)));
+
+    Ok(())
+}
+
+#[cfg(feature = "serde")]
+fn test_serde<G: Group>() -> Result<()>
+where
+    G::Elem: core::fmt::Debug + PartialEq,
+    G::Scalar: core::fmt::Debug + PartialEq,
+{
+    use super::{Element, Scalar};
+
+    let scalar = Scalar(G::random_scalar(&mut rand_core::OsRng));
+    let element = Element::<G>(G::base_elem() * &scalar.0);
+
+    let serialized_element = bincode::serialize(&element).unwrap();
+    let deserialized_element_1: Element<G> = bincode::deserialize(&serialized_element).unwrap();
+    let deserialized_element_2: Element<G> =
+        bincode::deserialize_from(serialized_element.as_slice()).unwrap();
+
+    assert_eq!(element, deserialized_element_1);
+    assert_eq!(element, deserialized_element_2);
+
+    let serialized_scalar = bincode::serialize(&scalar).unwrap();
+    let deserialized_scalar_1: Scalar<G> = bincode::deserialize(&serialized_scalar).unwrap();
+    let deserialized_scalar_2: Scalar<G> =
+        bincode::deserialize_from(serialized_scalar.as_slice()).unwrap();
+
+    assert_eq!(scalar, deserialized_scalar_1);
+    assert_eq!(scalar, deserialized_scalar_2);
 
     Ok(())
 }

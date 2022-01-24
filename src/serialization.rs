@@ -16,6 +16,7 @@ use generic_array::sequence::Concat;
 use generic_array::typenum::{IsLess, IsLessOrEqual, Sum, Unsigned, U256};
 use generic_array::{ArrayLength, GenericArray};
 
+use crate::group::{Element, Scalar};
 use crate::{
     BlindedElement, CipherSuite, Error, EvaluationElement, Group, NonVerifiableClient,
     NonVerifiableServer, Proof, Result, VerifiableClient, VerifiableServer,
@@ -36,7 +37,7 @@ where
 {
     /// Serialization into bytes
     pub fn serialize(&self) -> GenericArray<u8, NonVerifiableClientLen<CS>> {
-        CS::Group::serialize_scalar(self.blind)
+        CS::Group::serialize_scalar(self.blind.0)
     }
 
     /// Deserialization from bytes
@@ -69,8 +70,8 @@ where
         <CS::Group as Group>::ScalarLen: Add<<CS::Group as Group>::ElemLen>,
         VerifiableClientLen<CS>: ArrayLength<u8>,
     {
-        <CS::Group as Group>::serialize_scalar(self.blind)
-            .concat(<CS::Group as Group>::serialize_elem(self.blinded_element))
+        <CS::Group as Group>::serialize_scalar(self.blind.0)
+            .concat(<CS::Group as Group>::serialize_elem(self.blinded_element.0))
     }
 
     /// Deserialization from bytes
@@ -100,7 +101,7 @@ where
 {
     /// Serialization into bytes
     pub fn serialize(&self) -> GenericArray<u8, NonVerifiableServerLen<CS>> {
-        CS::Group::serialize_scalar(self.sk)
+        CS::Group::serialize_scalar(self.sk.0)
     }
 
     /// Deserialization from bytes
@@ -133,7 +134,7 @@ where
         <CS::Group as Group>::ScalarLen: Add<<CS::Group as Group>::ElemLen>,
         VerifiableServerLen<CS>: ArrayLength<u8>,
     {
-        CS::Group::serialize_scalar(self.sk).concat(CS::Group::serialize_elem(self.pk))
+        CS::Group::serialize_scalar(self.sk.0).concat(CS::Group::serialize_elem(self.pk.0))
     }
 
     /// Deserialization from bytes
@@ -167,8 +168,8 @@ where
         <CS::Group as Group>::ScalarLen: Add<<CS::Group as Group>::ScalarLen>,
         ProofLen<CS>: ArrayLength<u8>,
     {
-        CS::Group::serialize_scalar(self.c_scalar)
-            .concat(CS::Group::serialize_scalar(self.s_scalar))
+        CS::Group::serialize_scalar(self.c_scalar.0)
+            .concat(CS::Group::serialize_scalar(self.s_scalar.0))
     }
 
     /// Deserialization from bytes
@@ -195,7 +196,7 @@ where
 {
     /// Serialization into bytes
     pub fn serialize(&self) -> GenericArray<u8, BlindedElementLen<CS>> {
-        CS::Group::serialize_elem(self.0)
+        CS::Group::serialize_elem(self.0 .0)
     }
 
     /// Deserialization from bytes
@@ -221,7 +222,7 @@ where
 {
     /// Serialization into bytes
     pub fn serialize(&self) -> GenericArray<u8, EvaluationElementLen<CS>> {
-        CS::Group::serialize_elem(self.0)
+        CS::Group::serialize_elem(self.0 .0)
     }
 
     /// Deserialization from bytes
@@ -237,16 +238,18 @@ where
     }
 }
 
-fn deserialize_elem<G: Group, I: Iterator<Item = u8>>(input: &mut I) -> Result<G::Elem> {
+fn deserialize_elem<G: Group, I: Iterator<Item = u8>>(input: &mut I) -> Result<Element<G>> {
     let input = input.by_ref().take(G::ElemLen::USIZE);
     GenericArray::<_, G::ElemLen>::from_exact_iter(input)
         .ok_or(Error::Deserialization)
         .and_then(|bytes| G::deserialize_elem(&bytes))
+        .map(Element)
 }
 
-fn deserialize_scalar<G: Group, I: Iterator<Item = u8>>(input: &mut I) -> Result<G::Scalar> {
+fn deserialize_scalar<G: Group, I: Iterator<Item = u8>>(input: &mut I) -> Result<Scalar<G>> {
     let input = input.by_ref().take(G::ScalarLen::USIZE);
     GenericArray::<_, G::ScalarLen>::from_exact_iter(input)
         .ok_or(Error::Deserialization)
         .and_then(|bytes| G::deserialize_scalar(&bytes))
+        .map(Scalar)
 }

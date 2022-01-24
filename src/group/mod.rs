@@ -13,6 +13,7 @@ mod ristretto;
 
 use core::ops::{Add, Mul, Sub};
 
+use derive_where::DeriveWhere;
 use digest::core_api::BlockSizeUser;
 use digest::OutputSizeUser;
 use generic_array::typenum::{IsLess, IsLessOrEqual, U256};
@@ -118,6 +119,68 @@ pub trait Group {
     /// [`Error::Deserialization`](crate::Error::Deserialization) if the scalar
     /// is not a valid point on the group or zero.
     fn deserialize_scalar(scalar_bits: &[u8]) -> Result<Self::Scalar>;
+}
+
+#[derive(DeriveWhere)]
+#[derive_where(Clone, Copy, Zeroize)]
+#[derive_where(Debug, Eq, Hash, Ord, PartialEq, PartialOrd; G::Elem)]
+pub(crate) struct Element<G: Group>(pub G::Elem);
+
+#[cfg(feature = "serde")]
+impl<'de, G: Group> serde::Deserialize<'de> for Element<G> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        GenericArray::<_, G::ElemLen>::deserialize(deserializer).and_then(|bytes| {
+            G::deserialize_elem(&bytes)
+                .map(Self)
+                .map_err(D::Error::custom)
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<G: Group> serde::Serialize for Element<G> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        G::serialize_elem(self.0).serialize(serializer)
+    }
+}
+
+#[derive(DeriveWhere)]
+#[derive_where(Clone, Copy, Zeroize)]
+#[derive_where(Debug, Eq, Hash, Ord, PartialEq, PartialOrd; G::Scalar)]
+pub(crate) struct Scalar<G: Group>(pub G::Scalar);
+
+#[cfg(feature = "serde")]
+impl<'de, G: Group> serde::Deserialize<'de> for Scalar<G> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        GenericArray::<_, G::ScalarLen>::deserialize(deserializer).and_then(|bytes| {
+            G::deserialize_scalar(&bytes)
+                .map(Self)
+                .map_err(D::Error::custom)
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<G: Group> serde::Serialize for Scalar<G> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        G::serialize_scalar(self.0).serialize(serializer)
+    }
 }
 
 #[cfg(test)]

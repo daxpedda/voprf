@@ -20,6 +20,7 @@ use generic_array::GenericArray;
 use rand_core::{CryptoRng, RngCore};
 use subtle::ConstantTimeEq;
 
+use crate::group::{Element, Scalar};
 use crate::util::{i2osp_2, i2osp_2_array};
 use crate::{CipherSuite, Error, Group, Result};
 
@@ -68,17 +69,14 @@ impl Mode {
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Scalar: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Scalar: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
 pub struct NonVerifiableClient<CS: CipherSuite>
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
 {
-    pub(crate) blind: <CS::Group as Group>::Scalar,
+    pub(crate) blind: Scalar<CS::Group>,
 }
 
 /// A client which engages with a [VerifiableServer] in verifiable mode, meaning
@@ -89,20 +87,15 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Scalar: serde::Deserialize<'de>, <CS::Group as \
-                       Group>::Elem: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Scalar: serde::Serialize, <CS::Group as Group>::Elem: \
-                     serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
 pub struct VerifiableClient<CS: CipherSuite>
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
 {
-    pub(crate) blind: <CS::Group as Group>::Scalar,
-    pub(crate) blinded_element: <CS::Group as Group>::Elem,
+    pub(crate) blind: Scalar<CS::Group>,
+    pub(crate) blinded_element: Element<CS::Group>,
 }
 
 /// A server which engages with a [NonVerifiableClient] in base mode, meaning
@@ -113,17 +106,14 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Scalar: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Scalar: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
 pub struct NonVerifiableServer<CS: CipherSuite>
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
 {
-    pub(crate) sk: <CS::Group as Group>::Scalar,
+    pub(crate) sk: Scalar<CS::Group>,
 }
 
 /// A server which engages with a [VerifiableClient] in verifiable mode, meaning
@@ -134,20 +124,15 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Scalar: serde::Deserialize<'de>, <CS::Group as \
-                       Group>::Elem: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Scalar: serde::Serialize, <CS::Group as Group>::Elem: \
-                     serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
 pub struct VerifiableServer<CS: CipherSuite>
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
 {
-    pub(crate) sk: <CS::Group as Group>::Scalar,
-    pub(crate) pk: <CS::Group as Group>::Elem,
+    pub(crate) sk: Scalar<CS::Group>,
+    pub(crate) pk: Element<CS::Group>,
 }
 
 /// A proof produced by a [VerifiableServer] that the OPRF output matches
@@ -158,18 +143,15 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Scalar: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Scalar: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
 pub struct Proof<CS: CipherSuite>
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
 {
-    pub(crate) c_scalar: <CS::Group as Group>::Scalar,
-    pub(crate) s_scalar: <CS::Group as Group>::Scalar,
+    pub(crate) c_scalar: Scalar<CS::Group>,
+    pub(crate) s_scalar: Scalar<CS::Group>,
 }
 
 /// The first client message sent from a client (either verifiable or not) to a
@@ -180,12 +162,9 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Elem: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Elem: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
-pub struct BlindedElement<CS: CipherSuite>(pub(crate) <CS::Group as Group>::Elem)
+pub struct BlindedElement<CS: CipherSuite>(pub(crate) Element<CS::Group>)
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>;
@@ -198,12 +177,9 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Elem: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Elem: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
-pub struct EvaluationElement<CS: CipherSuite>(pub(crate) <CS::Group as Group>::Elem)
+pub struct EvaluationElement<CS: CipherSuite>(pub(crate) Element<CS::Group>)
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>;
@@ -229,8 +205,10 @@ where
     ) -> Result<NonVerifiableClientBlindResult<CS>> {
         let (blind, blinded_element) = blind::<CS, _>(input, blinding_factor_rng, Mode::Base)?;
         Ok(NonVerifiableClientBlindResult {
-            state: Self { blind },
-            message: BlindedElement(blinded_element),
+            state: Self {
+                blind: Scalar(blind),
+            },
+            message: BlindedElement(Element(blinded_element)),
         })
     }
 
@@ -252,8 +230,10 @@ where
     ) -> Result<NonVerifiableClientBlindResult<CS>> {
         let blinded_element = deterministic_blind_unchecked::<CS>(input, &blind, Mode::Base)?;
         Ok(NonVerifiableClientBlindResult {
-            state: Self { blind },
-            message: BlindedElement(blinded_element),
+            state: Self {
+                blind: Scalar(blind),
+            },
+            message: BlindedElement(Element(blinded_element)),
         })
     }
 
@@ -269,7 +249,7 @@ where
         evaluation_element: &EvaluationElement<CS>,
         metadata: Option<&[u8]>,
     ) -> Result<Output<CS::Hash>> {
-        let unblinded_element = evaluation_element.0 * &CS::Group::invert_scalar(self.blind);
+        let unblinded_element = evaluation_element.0 .0 * &CS::Group::invert_scalar(self.blind.0);
         let mut outputs = finalize_after_unblind::<CS, _, _>(
             iter::once((input, unblinded_element)),
             metadata.unwrap_or_default(),
@@ -281,13 +261,15 @@ where
     #[cfg(test)]
     /// Only used for test functions
     pub fn from_blind(blind: <CS::Group as Group>::Scalar) -> Self {
-        Self { blind }
+        Self {
+            blind: Scalar(blind),
+        }
     }
 
     #[cfg(feature = "danger")]
     /// Exposes the blind group element
     pub fn get_blind(&self) -> <CS::Group as Group>::Scalar {
-        self.blind
+        self.blind.0
     }
 }
 
@@ -309,10 +291,10 @@ where
             blind::<CS, _>(input, blinding_factor_rng, Mode::Verifiable)?;
         Ok(VerifiableClientBlindResult {
             state: Self {
-                blind,
-                blinded_element,
+                blind: Scalar(blind),
+                blinded_element: Element(blinded_element),
             },
-            message: BlindedElement(blinded_element),
+            message: BlindedElement(Element(blinded_element)),
         })
     }
 
@@ -335,10 +317,10 @@ where
         let blinded_element = deterministic_blind_unchecked::<CS>(input, &blind, Mode::Verifiable)?;
         Ok(VerifiableClientBlindResult {
             state: Self {
-                blind,
-                blinded_element,
+                blind: Scalar(blind),
+                blinded_element: Element(blinded_element),
             },
-            message: BlindedElement(blinded_element),
+            message: BlindedElement(Element(blinded_element)),
         })
     }
 
@@ -415,15 +397,15 @@ where
         blinded_element: <CS::Group as Group>::Elem,
     ) -> Self {
         Self {
-            blind,
-            blinded_element,
+            blind: Scalar(blind),
+            blinded_element: Element(blinded_element),
         }
     }
 
     #[cfg(test)]
     /// Only used for test functions
     pub fn get_blind(&self) -> <CS::Group as Group>::Scalar {
-        self.blind
+        self.blind.0
     }
 }
 
@@ -448,7 +430,7 @@ where
     /// the group or zero.
     pub fn new_with_key(private_key_bytes: &[u8]) -> Result<Self> {
         let sk = CS::Group::deserialize_scalar(private_key_bytes)?;
-        Ok(Self { sk })
+        Ok(Self { sk: Scalar(sk) })
     }
 
     /// Produces a new instance of a [NonVerifiableServer] using a supplied set
@@ -460,13 +442,13 @@ where
     /// [`Error::Seed`] if the `seed` is empty or longer then [`u16::MAX`].
     pub fn new_from_seed(seed: &[u8]) -> Result<Self> {
         let sk = CS::Group::hash_to_scalar::<CS>(&[seed], Mode::Base).map_err(|_| Error::Seed)?;
-        Ok(Self { sk })
+        Ok(Self { sk: Scalar(sk) })
     }
 
     // Only used for tests
     #[cfg(test)]
     pub fn get_private_key(&self) -> <CS::Group as Group>::Scalar {
-        self.sk
+        self.sk.0
     }
 
     /// Computes the second step for the multiplicative blinding version of
@@ -496,7 +478,7 @@ where
         let m =
             CS::Group::hash_to_scalar::<CS>(&context, Mode::Base).map_err(|_| Error::Metadata)?;
         // t = skS + m
-        let t = self.sk + &m;
+        let t = self.sk.0 + &m;
 
         // if t == 0:
         if bool::from(CS::Group::is_zero_scalar(t)) {
@@ -505,9 +487,9 @@ where
         }
 
         // Z = t^(-1) * R
-        let z = blinded_element.0 * &CS::Group::invert_scalar(t);
+        let z = blinded_element.0 .0 * &CS::Group::invert_scalar(t);
 
-        Ok(EvaluationElement(z))
+        Ok(EvaluationElement(Element(z)))
     }
 }
 
@@ -533,7 +515,10 @@ where
     pub fn new_with_key(key: &[u8]) -> Result<Self> {
         let sk = CS::Group::deserialize_scalar(key)?;
         let pk = CS::Group::base_elem() * &sk;
-        Ok(Self { sk, pk })
+        Ok(Self {
+            sk: Scalar(sk),
+            pk: Element(pk),
+        })
     }
 
     /// Produces a new instance of a [VerifiableServer] using a supplied set of
@@ -547,13 +532,16 @@ where
         let sk =
             CS::Group::hash_to_scalar::<CS>(&[seed], Mode::Verifiable).map_err(|_| Error::Seed)?;
         let pk = CS::Group::base_elem() * &sk;
-        Ok(Self { sk, pk })
+        Ok(Self {
+            sk: Scalar(sk),
+            pk: Element(pk),
+        })
     }
 
     // Only used for tests
     #[cfg(test)]
     pub fn get_private_key(&self) -> <CS::Group as Group>::Scalar {
-        self.sk
+        self.sk.0
     }
 
     /// Computes the second step for the multiplicative blinding version of
@@ -656,7 +644,7 @@ where
 
         let m = CS::Group::hash_to_scalar::<CS>(&context, Mode::Verifiable)
             .map_err(|_| Error::Metadata)?;
-        let t = self.sk + &m;
+        let t = self.sk.0 + &m;
 
         // if t == 0:
         if bool::from(CS::Group::is_zero_scalar(t)) {
@@ -669,12 +657,12 @@ where
             // possible if we `move` from context.
             .zip(iter::repeat(CS::Group::invert_scalar(t)))
             .map(<fn((&BlindedElement<CS>, _)) -> _>::from(|(x, t)| {
-                PreparedEvaluationElement(EvaluationElement(x.0 * &t))
+                PreparedEvaluationElement(EvaluationElement(Element(x.0 .0 * &t)))
             }));
 
         Ok(VerifiableServerBatchEvaluatePrepareResult {
             prepared_evaluation_elements: evaluation_elements,
-            t: PreparedTscalar(t),
+            t: PreparedTscalar(Scalar(t)),
         })
     }
 
@@ -697,11 +685,11 @@ where
         <&'b IE as IntoIterator>::IntoIter: ExactSizeIterator,
     {
         let g = CS::Group::base_elem();
-        let u = g * t;
+        let u = g * &t.0;
 
         let proof = generate_proof(
             rng,
-            *t,
+            t.0,
             g,
             u,
             evaluation_elements
@@ -721,7 +709,7 @@ where
 
     /// Retrieves the server's public key
     pub fn get_public_key(&self) -> <CS::Group as Group>::Elem {
-        self.pk
+        self.pk.0
     }
 }
 
@@ -738,13 +726,13 @@ where
     /// This should be used with caution, since it does not perform any checks
     /// on the validity of the value itself!
     pub fn from_value_unchecked(value: <CS::Group as Group>::Elem) -> Self {
-        Self(value)
+        Self(Element(value))
     }
 
     #[cfg(feature = "danger")]
     /// Exposes the internal value
     pub fn value(&self) -> <CS::Group as Group>::Elem {
-        self.0
+        self.0 .0
     }
 }
 
@@ -761,13 +749,13 @@ where
     /// This should be used with caution, since it does not perform any checks
     /// on the validity of the value itself!
     pub fn from_value_unchecked(value: <CS::Group as Group>::Elem) -> Self {
-        Self(value)
+        Self(Element(value))
     }
 
     #[cfg(feature = "danger")]
     /// Exposes the internal value
     pub fn value(&self) -> <CS::Group as Group>::Elem {
-        self.0
+        self.0 .0
     }
 }
 
@@ -834,10 +822,7 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Elem: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Elem: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
 pub struct PreparedEvaluationElement<CS: CipherSuite>(EvaluationElement<CS>)
 where
@@ -851,12 +836,9 @@ where
 #[cfg_attr(
     feature = "serde",
     derive(serde::Deserialize, serde::Serialize),
-    serde(bound(
-        deserialize = "<CS::Group as Group>::Scalar: serde::Deserialize<'de>",
-        serialize = "<CS::Group as Group>::Scalar: serde::Serialize"
-    ))
+    serde(crate = "serde", bound = "")
 )]
-pub struct PreparedTscalar<CS: CipherSuite>(<CS::Group as Group>::Scalar)
+pub struct PreparedTscalar<CS: CipherSuite>(Scalar<CS::Group>)
 where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>;
@@ -1030,7 +1012,7 @@ where
     let blinds = clients
         .into_iter()
         // Convert to `fn` pointer to make a return type possible.
-        .map(<fn(&VerifiableClient<CS>) -> _>::from(|x| x.blind));
+        .map(<fn(&VerifiableClient<CS>) -> _>::from(|x| x.blind.0));
     let evaluation_elements = messages.into_iter().cloned();
     let blinded_elements = clients
         .into_iter()
@@ -1040,7 +1022,7 @@ where
 
     Ok(blinds
         .zip(messages.into_iter())
-        .map(|(blind, x)| x.0 * &CS::Group::invert_scalar(blind)))
+        .map(|(blind, x)| x.0 .0 * &CS::Group::invert_scalar(blind)))
 }
 
 // Can only fail with [`Error::Batch`].
@@ -1107,7 +1089,10 @@ where
     let c_scalar = CS::Group::hash_to_scalar::<CS>(&h2_input, Mode::Verifiable).unwrap();
     let s_scalar = r - &(c_scalar * &k);
 
-    Ok(Proof { c_scalar, s_scalar })
+    Ok(Proof {
+        c_scalar: Scalar(c_scalar),
+        s_scalar: Scalar(s_scalar),
+    })
 }
 
 // Can only fail with [`Error::ProofVerification`] or [`Error::Batch`].
@@ -1125,8 +1110,8 @@ where
 {
     // https://www.ietf.org/archive/id/draft-irtf-cfrg-voprf-08.html#section-3.3.4.1-2
     let (m, z) = compute_composites(None, b, cs, ds)?;
-    let t2 = (a * &proof.s_scalar) + &(b * &proof.c_scalar);
-    let t3 = (m * &proof.s_scalar) + &(z * &proof.c_scalar);
+    let t2 = (a * &proof.s_scalar.0) + &(b * &proof.c_scalar.0);
+    let t3 = (m * &proof.s_scalar.0) + &(z * &proof.c_scalar.0);
 
     // Bm = GG.SerializeElement(B)
     let bm = CS::Group::serialize_elem(b);
@@ -1169,7 +1154,7 @@ where
     // This can't fail, the size of the `input` is known.
     let c = CS::Group::hash_to_scalar::<CS>(&h2_input, Mode::Verifiable).unwrap();
 
-    match c.ct_eq(&proof.c_scalar).into() {
+    match c.ct_eq(&proof.c_scalar.0).into() {
         true => Ok(()),
         false => Err(Error::ProofVerification),
     }
@@ -1276,9 +1261,9 @@ where
 
     for (i, (c, d)) in (0..len).zip(c_slice.zip(d_slice)) {
         // Ci = GG.SerializeElement(Cs[i])
-        let ci = CS::Group::serialize_elem(c.0);
+        let ci = CS::Group::serialize_elem(c.0 .0);
         // Di = GG.SerializeElement(Ds[i])
-        let di = CS::Group::serialize_elem(d.0);
+        let di = CS::Group::serialize_elem(d.0 .0);
         // h2Input = I2OSP(len(seed), 2) || seed || I2OSP(i, 2) ||
         //           I2OSP(len(Ci), 2) || Ci ||
         //           I2OSP(len(Di), 2) || Di ||
@@ -1296,10 +1281,10 @@ where
         ];
         // This can't fail, the size of the `input` is known.
         let di = CS::Group::hash_to_scalar::<CS>(&h2_input, Mode::Verifiable).unwrap();
-        m = c.0 * &di + &m;
+        m = c.0 .0 * &di + &m;
         z = match k_option {
             Some(_) => z,
-            None => d.0 * &di + &z,
+            None => d.0 .0 * &di + &z,
         };
     }
 

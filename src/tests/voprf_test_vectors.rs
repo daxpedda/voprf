@@ -191,7 +191,7 @@ where
 
             assert_eq!(
                 &parameters.blind[i],
-                &CS::Group::serialize_scalar(client_result.state.blind).to_vec()
+                &CS::Group::serialize_scalar(client_result.state.blind.0).to_vec()
             );
             assert_eq!(
                 parameters.blinded_element[i].as_slice(),

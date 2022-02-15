@@ -33,7 +33,8 @@ pub(crate) const STR_HASH_TO_GROUP: [u8; 12] = *b"HashToGroup-";
 /// subgroup is noted additively — as in the draft RFC — in this trait.
 pub trait Group {
     /// The type of group elements
-    type Elem: Copy
+    type Elem: ConstantTimeEq
+        + Copy
         + Zeroize
         + for<'a> Add<&'a Self::Elem, Output = Self::Elem>
         + for<'a> Mul<&'a Self::Scalar, Output = Self::Elem>;

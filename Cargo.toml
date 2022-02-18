@@ -27,7 +27,7 @@ std = ["alloc"]
 
 [dependencies]
 curve25519-dalek = { version = "=4.0.0-pre.1", default-features = false, optional = true }
-derive-where = { version = "=1.0.0-rc.2", features = ["zeroize-on-drop"] }
+derive-where = { version = "=1.0.0-rc.3", features = ["zeroize-on-drop"] }
 digest = "0.10"
 displaydoc = { version = "0.2", default-features = false }
 elliptic-curve = { version = "=0.12.0-pre.1", features = [
@@ -60,3 +60,6 @@ sha2 = "0.10"
 [package.metadata.docs.rs]
 features = ["danger", "std"]
 targets = []
+
+[patch.crates-io]
+derive-where = { git = "https://github.com/ModProg/derive-where" }

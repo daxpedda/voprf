@@ -20,6 +20,7 @@ use generic_array::GenericArray;
 use rand_core::{CryptoRng, RngCore};
 use subtle::ConstantTimeEq;
 
+use crate::group::{STR_HASH_TO_GROUP, STR_HASH_TO_SCALAR};
 #[cfg(feature = "serde")]
 use crate::serialization::serde::{Element, Scalar};
 use crate::util::{i2osp_2, i2osp_2_array};
@@ -443,7 +444,10 @@ where
     /// # Errors
     /// [`Error::Seed`] if the `seed` is empty or longer then [`u16::MAX`].
     pub fn new_from_seed(seed: &[u8]) -> Result<Self> {
-        let sk = CS::Group::hash_to_scalar::<CS>(&[seed], Mode::Base).map_err(|_| Error::Seed)?;
+        let dst =
+            GenericArray::from(STR_HASH_TO_SCALAR).concat(get_context_string::<CS>(Mode::Base));
+
+        let sk = CS::Group::hash_to_scalar::<CS>(&[seed], &dst).map_err(|_| Error::Seed)?;
         Ok(Self { sk })
     }
 
@@ -476,9 +480,10 @@ where
             .concat(i2osp_2(metadata.len()).map_err(|_| Error::Metadata)?);
         let context = [&context, metadata];
 
+        let dst =
+            GenericArray::from(STR_HASH_TO_SCALAR).concat(get_context_string::<CS>(Mode::Base));
         // m = GG.HashToScalar(context)
-        let m =
-            CS::Group::hash_to_scalar::<CS>(&context, Mode::Base).map_err(|_| Error::Metadata)?;
+        let m = CS::Group::hash_to_scalar::<CS>(&context, &dst).map_err(|_| Error::Metadata)?;
         // t = skS + m
         let t = self.sk + &m;
 
@@ -528,8 +533,9 @@ where
     /// # Errors
     /// [`Error::Seed`] if the `seed` is empty or longer then [`u16::MAX`].
     pub fn new_from_seed(seed: &[u8]) -> Result<Self> {
-        let sk =
-            CS::Group::hash_to_scalar::<CS>(&[seed], Mode::Verifiable).map_err(|_| Error::Seed)?;
+        let dst = GenericArray::from(STR_HASH_TO_SCALAR)
+            .concat(get_context_string::<CS>(Mode::Verifiable));
+        let sk = CS::Group::hash_to_scalar::<CS>(&[seed], &dst).map_err(|_| Error::Seed)?;
         let pk = CS::Group::base_elem() * &sk;
         Ok(Self { sk, pk })
     }
@@ -638,8 +644,9 @@ where
             .concat(i2osp_2(metadata.len()).map_err(|_| Error::Metadata)?);
         let context = [&context, metadata];
 
-        let m = CS::Group::hash_to_scalar::<CS>(&context, Mode::Verifiable)
-            .map_err(|_| Error::Metadata)?;
+        let dst = GenericArray::from(STR_HASH_TO_SCALAR)
+            .concat(get_context_string::<CS>(Mode::Verifiable));
+        let m = CS::Group::hash_to_scalar::<CS>(&context, &dst).map_err(|_| Error::Metadata)?;
         let t = self.sk + &m;
 
         // if t == 0:
@@ -945,7 +952,8 @@ where
     <CS::Hash as OutputSizeUser>::OutputSize:
         IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
 {
-    let hashed_point = CS::Group::hash_to_curve::<CS>(&[input], mode).map_err(|_| Error::Input)?;
+    let dst = GenericArray::from(STR_HASH_TO_GROUP).concat(get_context_string::<CS>(mode));
+    let hashed_point = CS::Group::hash_to_curve::<CS>(&[input], &dst).map_err(|_| Error::Input)?;
     Ok(hashed_point * blind)
 }
 
@@ -992,9 +1000,10 @@ where
         .concat(i2osp_2(info.len()).map_err(|_| Error::Metadata)?);
     let context = [&context, info];
 
+    let dst =
+        GenericArray::from(STR_HASH_TO_SCALAR).concat(get_context_string::<CS>(Mode::Verifiable));
     // The `input` used here is the metadata.
-    let m =
-        CS::Group::hash_to_scalar::<CS>(&context, Mode::Verifiable).map_err(|_| Error::Metadata)?;
+    let m = CS::Group::hash_to_scalar::<CS>(&context, &dst).map_err(|_| Error::Metadata)?;
 
     let g = CS::Group::base_elem();
     let t = g * &m;
@@ -1076,8 +1085,10 @@ where
         &challenge_dst,
     ];
 
+    let dst =
+        GenericArray::from(STR_HASH_TO_SCALAR).concat(get_context_string::<CS>(Mode::Verifiable));
     // This can't fail, the size of the `input` is known.
-    let c_scalar = CS::Group::hash_to_scalar::<CS>(&h2_input, Mode::Verifiable).unwrap();
+    let c_scalar = CS::Group::hash_to_scalar::<CS>(&h2_input, &dst).unwrap();
     let s_scalar = r - &(c_scalar * &k);
 
     Ok(Proof { c_scalar, s_scalar })
@@ -1139,8 +1150,10 @@ where
         &challenge_dst,
     ];
 
+    let dst =
+        GenericArray::from(STR_HASH_TO_SCALAR).concat(get_context_string::<CS>(Mode::Verifiable));
     // This can't fail, the size of the `input` is known.
-    let c = CS::Group::hash_to_scalar::<CS>(&h2_input, Mode::Verifiable).unwrap();
+    let c = CS::Group::hash_to_scalar::<CS>(&h2_input, &dst).unwrap();
 
     match c.ct_eq(&proof.c_scalar).into() {
         true => Ok(()),
@@ -1267,8 +1280,10 @@ where
             &composite_dst_len,
             &composite_dst,
         ];
+        let dst = GenericArray::from(STR_HASH_TO_SCALAR)
+            .concat(get_context_string::<CS>(Mode::Verifiable));
         // This can't fail, the size of the `input` is known.
-        let di = CS::Group::hash_to_scalar::<CS>(&h2_input, Mode::Verifiable).unwrap();
+        let di = CS::Group::hash_to_scalar::<CS>(&h2_input, &dst).unwrap();
         m = c.0 * &di + &m;
         z = match k_option {
             Some(_) => z,
@@ -1325,13 +1340,15 @@ mod tests {
         <CS::Hash as OutputSizeUser>::OutputSize:
             IsLess<U256> + IsLessOrEqual<<CS::Hash as BlockSizeUser>::BlockSize>,
     {
-        let point = CS::Group::hash_to_curve::<CS>(&[input], mode).unwrap();
+        let dst = GenericArray::from(STR_HASH_TO_GROUP).concat(get_context_string::<CS>(mode));
+        let point = CS::Group::hash_to_curve::<CS>(&[input], &dst).unwrap();
 
         let context_string = get_context_string::<CS>(mode);
         let info_len = i2osp_2(info.len()).unwrap();
         let context = [&STR_CONTEXT, context_string.as_slice(), &info_len, info];
 
-        let m = CS::Group::hash_to_scalar::<CS>(&context, mode).unwrap();
+        let dst = GenericArray::from(STR_HASH_TO_SCALAR).concat(get_context_string::<CS>(mode));
+        let m = CS::Group::hash_to_scalar::<CS>(&context, &dst).unwrap();
 
         let res = point * &CS::Group::invert_scalar(key + &m);
 
@@ -1404,7 +1421,9 @@ mod tests {
             .unwrap();
         let wrong_pk = {
             // Choose a group element that is unlikely to be the right public key
-            CS::Group::hash_to_curve::<CS>(&[b"msg"], Mode::Base).unwrap()
+            let dst =
+                GenericArray::from(STR_HASH_TO_GROUP).concat(get_context_string::<CS>(Mode::Base));
+            CS::Group::hash_to_curve::<CS>(&[b"msg"], &dst).unwrap()
         };
         let client_finalize_result = client_blind_result.state.finalize(
             input,
@@ -1509,7 +1528,9 @@ mod tests {
         let messages: Vec<_> = messages.collect();
         let wrong_pk = {
             // Choose a group element that is unlikely to be the right public key
-            CS::Group::hash_to_curve::<CS>(&[b"msg"], Mode::Base).unwrap()
+            let dst =
+                GenericArray::from(STR_HASH_TO_GROUP).concat(get_context_string::<CS>(Mode::Base));
+            CS::Group::hash_to_curve::<CS>(&[b"msg"], &dst).unwrap()
         };
         let client_finalize_result = VerifiableClient::batch_finalize(
             &inputs,
@@ -1541,7 +1562,9 @@ mod tests {
             )
             .unwrap();
 
-        let point = CS::Group::hash_to_curve::<CS>(&[&input], Mode::Base).unwrap();
+        let dst =
+            GenericArray::from(STR_HASH_TO_GROUP).concat(get_context_string::<CS>(Mode::Base));
+        let point = CS::Group::hash_to_curve::<CS>(&[&input], &dst).unwrap();
         let res2 = finalize_after_unblind::<CS, _, _>(
             iter::once((input.as_ref(), point)),
             info,

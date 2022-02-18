@@ -23,7 +23,6 @@ pub use ristretto::Ristretto255;
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
-use crate::voprf::Mode;
 use crate::{CipherSuite, InternalError, Result};
 
 pub(crate) const STR_HASH_TO_SCALAR: [u8; 13] = *b"HashToScalar-";
@@ -60,7 +59,7 @@ pub trait Group {
     /// then [`u16::MAX`].
     fn hash_to_curve<CS: CipherSuite>(
         input: &[&[u8]],
-        mode: Mode,
+        dst: &[u8],
     ) -> Result<Self::Elem, InternalError>
     where
         <CS::Hash as OutputSizeUser>::OutputSize:
@@ -73,7 +72,7 @@ pub trait Group {
     /// then [`u16::MAX`].
     fn hash_to_scalar<CS: CipherSuite>(
         input: &[&[u8]],
-        mode: Mode,
+        dst: &[u8],
     ) -> Result<Self::Scalar, InternalError>
     where
         <CS::Hash as OutputSizeUser>::OutputSize:

@@ -60,6 +60,3 @@ sha2 = "0.10"
 [package.metadata.docs.rs]
 features = ["danger", "std"]
 targets = []
-
-[patch.crates-io]
-derive-where = { git = "https://github.com/ModProg/derive-where" }
